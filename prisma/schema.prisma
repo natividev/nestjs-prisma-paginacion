@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model clientes {
+  id               Int                @id @unique(map: "unique_clientes_id") @default(autoincrement())
+  nombre           String             @db.VarChar(30)
+  apellido         String             @db.VarChar(30)
+  tipo_doc         String             @db.VarChar(20)
+  nro_doc          String             @db.VarChar(20)
+  nro_tel_princ    String             @unique(map: "unique_clientes_nro_tel_princ") @db.VarChar(40)
+  nro_tel_sec      String?            @db.VarChar(40)
+  email            String?            @db.VarChar(40)
+  compras_clientes compras_clientes[]
+
+  @@unique([nombre, apellido], map: "unique_clientes_nombre_apellido")
+  @@unique([nro_doc, tipo_doc], map: "unique_clientes_tipo_nro_documento")
+}
+
+model compras_clientes {
+  id         Int      @id @unique(map: "unique_compras_clientes_id") @default(autoincrement())
+  id_venta   Int
+  id_cliente Int
+  clientes   clientes @relation(fields: [id_cliente], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_compras_clientes_id_cliente")
+  ventas     ventas   @relation(fields: [id_venta], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_compras_clientes_id_venta")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model empleados {
+  id            Int      @id @unique(map: "unique_empleados_id") @default(autoincrement())
+  nombre        String   @db.VarChar(30)
+  apellido      String   @db.VarChar(30)
+  edad          Int
+  fecha_nac     DateTime @db.Date
+  tipo_doc      String   @db.VarChar(50)
+  nro_doc       String   @db.VarChar(20)
+  cuil          String   @db.VarChar(30)
+  direccion     String   @db.VarChar(40)
+  nro_tel_princ String   @unique(map: "unique_empleados_nro_tel_princ") @db.VarChar(40)
+  nro_tel_sec   String?  @db.VarChar(40)
+  email         String?  @db.VarChar(40)
+  cargo         String   @db.VarChar(40)
+  antiguedad    String   @db.VarChar(30)
+  fecha_ingreso DateTime @db.Date
+  salario_anual Decimal  @db.Decimal(10, 2)
+  ventas        ventas[]
+
+  @@unique([nombre, apellido], map: "unique_empleados_nombre_apellido")
+  @@unique([nro_doc, cuil], map: "unique_empleados_nro_doc_cuil")
+  @@unique([tipo_doc, nro_doc], map: "unique_tipo_nro_doc")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model facturas {
+  id                Int                @id @unique(map: "unique_facturas_id") @default(autoincrement())
+  numero            String             @db.VarChar(200)
+  codigo            String             @db.VarChar(200)
+  fecha             DateTime           @db.Date
+  hora              DateTime           @db.Time(6)
+  importe_total     Decimal            @db.Decimal(10, 2)
+  facturas_detalles facturas_detalles?
+  ventas            ventas?
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model facturas_detalles {
+  id            Int               @id @unique(map: "unique_facturas_detalles_id") @default(autoincrement())
+  id_factura    Int               @unique(map: "unique_facturas_detalles_id_factura")
+  tipo          tipo_factura_enum
+  descr_factura String            @db.VarChar(100)
+  costo_asoc    Decimal           @db.Decimal(8, 2)
+  iva           Decimal           @db.Decimal(10, 2)
+  medio_de_pago tipo_pago_enum
+  descr_pago    String            @db.VarChar(100)
+  facturas      facturas          @relation(fields: [id_factura], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_facturas_detalles_id_factura")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model productos {
+  id               Int                @id @unique(map: "unique_productos_id") @default(autoincrement())
+  id_proveedor     Int
+  codigo           String             @unique(map: "unique_productos_codigo") @db.VarChar(100)
+  imagen           String?            @db.VarChar(600)
+  nombre           String             @db.VarChar(100)
+  marca            String             @db.VarChar(60)
+  tipo             String             @db.VarChar(60)
+  grupo            String             @db.VarChar(60)
+  peso             Decimal            @db.Decimal(8, 3)
+  precio_unidad    Decimal            @db.Decimal(8, 3)
+  stock            Int                @db.SmallInt
+  proveedores      proveedores        @relation(fields: [id_proveedor], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_productos_id_proveedor")
+  ventas_productos ventas_productos[]
+
+  @@unique([codigo, nombre], map: "unique_productos_codigo_nombre")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model proveedores {
+  id            Int         @id @unique(map: "unique_proveedores_id") @default(autoincrement())
+  empresa       String      @db.VarChar(60)
+  tipo_producto String      @db.VarChar(100)
+  direccion     String      @db.VarChar(60)
+  nro_tel_princ String      @db.VarChar(40)
+  nro_tel_sec   String?     @db.VarChar(40)
+  email         String      @db.VarChar(60)
+  productos     productos[]
+}
+
+model ventas {
+  id               Int                @id @unique(map: "unique_ventas_id") @default(autoincrement())
+  id_empleado      Int
+  id_factura       Int                @unique(map: "unique_ventas_id_factura")
+  compras_clientes compras_clientes[]
+  empleados        empleados          @relation(fields: [id_empleado], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ventas_id_empleado")
+  facturas         facturas           @relation(fields: [id_factura], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ventas_id_factura")
+  ventas_productos ventas_productos[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ventas_productos {
+  id          Int       @id @unique(map: "unique_ventas_productos_id") @default(autoincrement())
+  id_venta    Int
+  id_producto Int
+  cantidad    Int
+  productos   productos @relation(fields: [id_producto], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ventas_productos_id_producto")
+  ventas      ventas    @relation(fields: [id_venta], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ventas_productos_id_venta")
+}
+
+enum tipo_factura_enum {
+  A
+  B
+  C
+  D
+}
+
+enum tipo_pago_enum {
+  EFECTIVO
+  CHEQUE
+  TARJETA_CREDITO @map("TARJETA CREDITO")
+  TARJETA_DEBITO  @map("TARJETA DEBITO")
+}
